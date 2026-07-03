@@ -36,7 +36,7 @@ Liczę podgraf przejść pieszych o promieniu 1,5 km
 6. Ten sam przystanek z różnych GTFS jest traktowany jako dwa różne (na razie)
 
 
-### Raptor
+### RAPTOR
 
 Zaimplementowałem podstawowy RAPTOR szukający najwcześniejszego możliwego przyjazdu dla danego czasu odjazdu.
 Napotkane problemy:
@@ -44,5 +44,13 @@ Napotkane problemy:
 - Gubiłem czas odjechania połączenia, trzymając tylko czas przyjazdu na przystanek
 - Czas przesiadki - miałem zerowy minimalny czas przesiadki -> ustawiłem go na 120 sekund domyślnie
 
+Nierozwiązane:
+- Nawet jak czas odjazdu pierwszego połączenia jest późniejszy to pokazuje wyjście piesze o zadanej godzinie
+- Przejścia piesze pomiędzy tymi samymi przystankami (dodać numery przystanków czy złączyć w jeden)
 
+### HTML i serwer
+W tworzeniu warstwy graficznej LLM jest współautorem
+
+Stworzyłem z pomocą LLM skrypt w js i stronę do wyświetlania wyszukiwarki połączeń w przeglądarce.
+Dzięki temu można wybrać przystanki początkowy i końcowy (podpowiada dostępne), godzinę odjazdu i wyszukać połączenie.
 

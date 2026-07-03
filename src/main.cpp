@@ -14,6 +14,22 @@ inline std::string format_time(raptor::Time t) {
     return std::string(buf);
 }
 
+#include "httplib.h"
+#include "json.hpp"
+
+using json = nlohmann::json;
+
+inline raptor::Time parse_time(const std::string& time_str) {
+    if (time_str.size() < 5) return raptor::INVALID_TIME;
+    try {
+        uint32_t h = std::stoi(time_str.substr(0, 2));
+        uint32_t m = std::stoi(time_str.substr(3, 2));
+        return h * 3600 + m * 60;
+    } catch (...) {
+        return raptor::INVALID_TIME;
+    }
+}
+
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "Użycie: " << argv[0] << " <plik_gtfs_1> [<plik_gtfs_2> ...]\n";
@@ -46,34 +62,80 @@ int main(int argc, char** argv) {
 
     if (raptor_graph.stop_count() < 2) return 0;
 
-    raptor::BasicRaptor raptor_algo(raptor_graph);
-    std::mt19937 gen(321745922);
-    raptor::StopId source = gen() % raptor_graph.stop_count();
-    raptor::StopId target = gen() % raptor_graph.stop_count();
-    raptor::Time dep_time = 6 * 3600 + gen() % (10*3600); // 06:00:00 - 16:00:00
+    httplib::Server svr;
 
-    std::cout << "--- Basic RAPTOR ---\n";
-    std::cout << "Od: " << raptor_graph.stop_name(source) 
-              << "\nDo: " << raptor_graph.stop_name(target) << "\nCzas Wyjazdu: " << format_time(dep_time) << "\n";
-    
-    auto result = raptor_algo.find_earliest_arrival(source, target, dep_time);
-    
-    if (result) {
-        std::cout << "Znaleziono połączenie: Czas przyjazdu: " << format_time(result->arrival_time) << "\n";
-        std::cout << "Trasa:\n";
-        for (const auto& leg : result->legs) {
-            std::cout << "    * " << raptor_graph.stop_name(leg.from_stop)
-                      << " ---> " << raptor_graph.stop_name(leg.to_stop);
-            if (leg.route == raptor::INVALID_ROUTE) {
-                std::cout << " (Pieszo)";
-            } else {
-                std::cout << " (Linia: " << raptor_graph.route_name(leg.route) << ")";
-            }
-            std::cout << " [" << format_time(leg.start_time) << " -> " << format_time(leg.end_time) << "]\n";
+    // Serwowanie plików statycznych HTML/CSS/JS (uruchamiane z /build, więc cofamy się wyżej)
+    svr.set_mount_point("/", "../public");
+
+    // Zwraca listę wszystkich przystanków
+    svr.Get("/api/stops", [&raptor_graph](const httplib::Request&, httplib::Response& res) {
+        json stops = json::array();
+        for (raptor::StopId i = 0; i < raptor_graph.stop_count(); ++i) {
+            stops.push_back({
+                {"id", i},
+                {"name", raptor_graph.stop_name(i)}
+            });
         }
-    } else {
-        std::cout << "Brak połączenia.\n";
-    }
+        res.set_content(stops.dump(), "application/json");
+        res.set_header("Access-Control-Allow-Origin", "*");
+    });
+
+    // Wyszukuje połączenie
+    svr.Get("/api/route", [&raptor_graph](const httplib::Request& req, httplib::Response& res) {
+        if (!req.has_param("source") || !req.has_param("target") || !req.has_param("time")) {
+            res.status = 400;
+            res.set_content("Missing params", "text/plain");
+            return;
+        }
+        
+        raptor::StopId source = std::stoi(req.get_param_value("source"));
+        raptor::StopId target = std::stoi(req.get_param_value("target"));
+        std::string time_str = req.get_param_value("time");
+        
+        raptor::Time dep_time = parse_time(time_str);
+        if (dep_time == raptor::INVALID_TIME) {
+            res.status = 400;
+            res.set_content("Invalid time format (use HH:MM)", "text/plain");
+            return;
+        }
+        
+        raptor::BasicRaptor raptor_algo(raptor_graph);
+        auto result = raptor_algo.find_earliest_arrival(source, target, dep_time);
+        
+        if (!result) {
+            json error = {{"error", "Brak połączenia"}};
+            res.set_content(error.dump(), "application/json");
+            res.set_header("Access-Control-Allow-Origin", "*");
+            return;
+        }
+
+        json j_result;
+        j_result["arrival_time"] = format_time(result->arrival_time);
+        
+        json j_legs = json::array();
+        for (const auto& leg : result->legs) {
+            json j_leg;
+            j_leg["from_stop"] = raptor_graph.stop_name(leg.from_stop);
+            j_leg["to_stop"] = raptor_graph.stop_name(leg.to_stop);
+            j_leg["start_time"] = format_time(leg.start_time);
+            j_leg["end_time"] = format_time(leg.end_time);
+            if (leg.route == raptor::INVALID_ROUTE) {
+                j_leg["type"] = "walk";
+                j_leg["route_name"] = "Pieszo";
+            } else {
+                j_leg["type"] = "transit";
+                j_leg["route_name"] = raptor_graph.route_name(leg.route);
+            }
+            j_legs.push_back(j_leg);
+        }
+        j_result["legs"] = j_legs;
+        
+        res.set_content(j_result.dump(), "application/json");
+        res.set_header("Access-Control-Allow-Origin", "*");
+    });
+
+    std::cout << "Uruchamianie serwera na porcie 8080... (http://localhost:8080/)\n";
+    svr.listen("0.0.0.0", 8080);
 
     return 0;
 }

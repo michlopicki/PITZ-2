@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PITZ-2 Wyszukiwarka połączeń</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-decor"></div>
+    <div class="background-decor decor-2"></div>
+    
+    <div class="container">
+        <main>
+            <form id="search-form" class="glass-panel">
+                <div class="input-group">
+                    <label for="source">Z przystanku</label>
+                    <input type="text" id="source" placeholder="Np. Teatr Bagatela" list="stops-list" required autocomplete="off">
+                </div>
+                
+                <div class="input-group">
+                    <label for="target">Do przystanku</label>
+                    <input type="text" id="target" placeholder="Np. Wieliczka Kopalnia Soli" list="stops-list" required autocomplete="off">
+                </div>
+                
+                <div class="input-group">
+                    <label for="time">Godzina odjazdu</label>
+                    <input type="time" id="time" value="08:00" required>
+                </div>
+
+                <button type="submit" class="btn-primary">Szukaj połączenia</button>
+            </form>
+
+            <datalist id="stops-list"></datalist>
+
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>Wyszukiwanie trasy...</p>
+            </div>
+
+            <div id="results" class="hidden">
+                <div class="glass-panel result-panel">
+                    <p class="arrival-time">Przyjazd o: <span id="arrival-val"></span></p>
+                    
+                    <div class="timeline" id="timeline">
+                        <!-- tu będą etapy trasy -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="error" class="hidden glass-panel error-panel">
+                <h2>Błąd wyszukiwania</h2>
+                <p id="error-val"></p>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
