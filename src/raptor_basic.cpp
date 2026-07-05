@@ -6,7 +6,7 @@ namespace raptor {
 
 BasicRaptor::BasicRaptor(const RaptorGraph& graph) : graph_(graph) {}
 
-std::optional<Journey> BasicRaptor::find_earliest_arrival(StopId source, StopId target, Time departure_time, uint32_t max_rounds, Time min_transfer_time) {
+std::vector<Journey> BasicRaptor::find_pareto_journeys(StopId source, StopId target, Time departure_time, uint32_t max_rounds, Time min_transfer_time) {
     uint32_t num_stops = graph_.stop_count();
     
     // Tablice 1D tau[k * num_stops + i]
@@ -134,33 +134,32 @@ std::optional<Journey> BasicRaptor::find_earliest_arrival(StopId source, StopId 
         if (!any_marked) break;
     }
 
-    if (best_tau[target] == INVALID_TIME) {
-        return std::nullopt; // Brak połączenia
-    }
+    std::vector<Journey> pareto_journeys;
+    Time best_time_so_far = INVALID_TIME;
 
-    return reconstruct_journey(target, max_rounds, tau, bp);
-}
-
-Journey BasicRaptor::reconstruct_journey(StopId target, uint32_t max_rounds, const std::vector<Time>& tau, const std::vector<BackPointer>& bp) {
-    uint32_t num_stops = graph_.stop_count();
-    
-    // Szukamy w której rundzie
-    uint32_t best_k = 0;
-    Time best_time = INVALID_TIME;
+    // Przechodzimy po wszystkich rundach k. Im większe k,
+    // tym mniejszy musi być czas przyjazdu
     for (uint32_t k = 0; k <= max_rounds; ++k) {
-        if (tau[k * num_stops + target] != INVALID_TIME) {
-            if (best_time == INVALID_TIME || tau[k * num_stops + target] < best_time) {
-                best_time = tau[k * num_stops + target];
-                best_k = k;
+        Time current_arr = tau[k * num_stops + target];
+        if (current_arr != INVALID_TIME) {
+            if (best_time_so_far == INVALID_TIME || current_arr < best_time_so_far) {
+                best_time_so_far = current_arr;
+                pareto_journeys.push_back(reconstruct_journey(target, k, tau, bp));
             }
         }
     }
 
+    return pareto_journeys;
+}
+
+Journey BasicRaptor::reconstruct_journey(StopId target, uint32_t k, const std::vector<Time>& tau, const std::vector<BackPointer>& bp) {
+    uint32_t num_stops = graph_.stop_count();
+    
     Journey journey;
-    journey.arrival_time = best_time;
+    journey.arrival_time = tau[k * num_stops + target];
 
     StopId current_stop = target;
-    uint32_t current_k = best_k;
+    uint32_t current_k = k;
 
     while (current_k > 0) {
         const auto& ptr = bp[current_k * num_stops + current_stop];
@@ -197,6 +196,16 @@ Journey BasicRaptor::reconstruct_journey(StopId target, uint32_t max_rounds, con
     }
 
     std::reverse(journey.legs.begin(), journey.legs.end());
+
+    // Przesunięcie czasu wyjścia
+    if (!journey.legs.empty() && journey.legs[0].route == INVALID_ROUTE && journey.legs.size() > 1) {
+        Time walk_duration = journey.legs[0].end_time - journey.legs[0].start_time;
+        Time next_departure = journey.legs[1].start_time;
+        
+        journey.legs[0].end_time = next_departure;
+        journey.legs[0].start_time = next_departure - walk_duration;
+    }
+
     return journey;
 }
 

@@ -28,14 +28,14 @@ class BasicRaptor {
 public:
     BasicRaptor(const RaptorGraph& graph);
 
-    // Zwraca najszybszą podróż lub std::nullopt, jeśli brak połączenia
-    std::optional<Journey> find_earliest_arrival(StopId source, StopId target, Time departure_time, uint32_t max_rounds = 5, Time min_transfer_time = 120);
+    // Zwraca zbiór Pareto
+    std::vector<Journey> find_pareto_journeys(StopId source, StopId target, Time departure_time, uint32_t max_rounds = 4, Time min_transfer_time = 120);
 
 private:
     const RaptorGraph& graph_;
 
     // Funkcja do odtwarzania trasy
-    Journey reconstruct_journey(StopId target, uint32_t max_rounds, const std::vector<Time>& tau, const std::vector<BackPointer>& bp);
+    Journey reconstruct_journey(StopId target, uint32_t k, const std::vector<Time>& tau, const std::vector<BackPointer>& bp);
 };
 
 } // namespace raptor

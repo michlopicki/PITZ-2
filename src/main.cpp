@@ -64,8 +64,7 @@ int main(int argc, char** argv) {
 
     httplib::Server svr;
 
-    // Serwowanie plików statycznych HTML/CSS/JS (uruchamiane z /build, więc cofamy się wyżej)
-    svr.set_mount_point("/", "../public");
+    svr.set_mount_point("/", "../web");
 
     // Zwraca listę wszystkich przystanków
     svr.Get("/api/stops", [&raptor_graph](const httplib::Request&, httplib::Response& res) {
@@ -100,9 +99,9 @@ int main(int argc, char** argv) {
         }
         
         raptor::BasicRaptor raptor_algo(raptor_graph);
-        auto result = raptor_algo.find_earliest_arrival(source, target, dep_time);
+        auto pareto_journeys = raptor_algo.find_pareto_journeys(source, target, dep_time);
         
-        if (!result) {
+        if (pareto_journeys.empty()) {
             json error = {{"error", "Brak połączenia"}};
             res.set_content(error.dump(), "application/json");
             res.set_header("Access-Control-Allow-Origin", "*");
@@ -110,25 +109,39 @@ int main(int argc, char** argv) {
         }
 
         json j_result;
-        j_result["arrival_time"] = format_time(result->arrival_time);
-        
-        json j_legs = json::array();
-        for (const auto& leg : result->legs) {
-            json j_leg;
-            j_leg["from_stop"] = raptor_graph.stop_name(leg.from_stop);
-            j_leg["to_stop"] = raptor_graph.stop_name(leg.to_stop);
-            j_leg["start_time"] = format_time(leg.start_time);
-            j_leg["end_time"] = format_time(leg.end_time);
-            if (leg.route == raptor::INVALID_ROUTE) {
-                j_leg["type"] = "walk";
-                j_leg["route_name"] = "Pieszo";
-            } else {
-                j_leg["type"] = "transit";
-                j_leg["route_name"] = raptor_graph.route_name(leg.route);
+        json j_journeys = json::array();
+
+        for (const auto& journey : pareto_journeys) {
+            json j_journey;
+            j_journey["arrival_time"] = format_time(journey.arrival_time);
+            
+            json j_legs = json::array();
+            for (const auto& leg : journey.legs) {
+                json j_leg;
+                std::string from_name = raptor_graph.stop_name(leg.from_stop);
+                std::string to_name = raptor_graph.stop_name(leg.to_stop);
+                
+                j_leg["start_time"] = format_time(leg.start_time);
+                j_leg["end_time"] = format_time(leg.end_time);
+                
+                if (leg.route == raptor::INVALID_ROUTE) {
+                    j_leg["type"] = "walk";
+                    j_leg["route_name"] = "Pieszo";
+                    j_leg["from_stop"] = from_name;
+                    j_leg["to_stop"] = to_name;
+                } else {
+                    j_leg["type"] = "transit";
+                    j_leg["route_name"] = raptor_graph.route_name(leg.route);
+                    j_leg["from_stop"] = from_name;
+                    j_leg["to_stop"] = to_name;
+                }
+                j_legs.push_back(j_leg);
             }
-            j_legs.push_back(j_leg);
+            j_journey["legs"] = j_legs;
+            j_journeys.push_back(j_journey);
         }
-        j_result["legs"] = j_legs;
+
+        j_result["journeys"] = j_journeys;
         
         res.set_content(j_result.dump(), "application/json");
         res.set_header("Access-Control-Allow-Origin", "*");

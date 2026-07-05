@@ -81,24 +81,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderRoute(data) {
-        elArrivalVal.textContent = data.arrival_time;
-        elTimeline.innerHTML = '';
+        if (!data.journeys || data.journeys.length === 0) {
+            showError("Brak połączeń spełniających kryteria.");
+            return;
+        }
 
-        data.legs.forEach(leg => {
-            const div = document.createElement('div');
-            div.className = `leg ${leg.type}`;
-            
-            const routeClass = leg.type === 'walk' ? 'walk' : 'transit';
-            
-            div.innerHTML = `
-                <div class="leg-time">${leg.start_time} - ${leg.end_time}</div>
-                <div class="leg-desc">
-                    Z: ${leg.from_stop} <br>
-                    Do: ${leg.to_stop}
-                    <span class="route ${routeClass}">${leg.route_name}</span>
+        elResults.innerHTML = '<h2>Znalezione opcje:</h2>';
+
+        data.journeys.forEach((journey, index) => {
+            const numTransfers = journey.legs.filter(l => l.type === 'transit').length - 1;
+            const transfersText = numTransfers > 0 ? `${numTransfers} przesiadki` : `Bez przesiadek`;
+
+            const panel = document.createElement('div');
+            panel.className = 'glass-panel result-panel';
+            panel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 15px;">
+                    <h3 style="color: #10B981;">Opcja ${index + 1}</h3>
+                    <span style="background: rgba(79, 70, 229, 0.2); color: #4F46E5; padding: 4px 10px; border-radius: 8px; font-weight: bold;">
+                        ${transfersText}
+                    </span>
                 </div>
+                <p class="arrival-time">Przyjazd o: <span style="color: #4F46E5; font-size: 1.5rem;">${journey.arrival_time}</span></p>
+                <div class="timeline"></div>
             `;
-            elTimeline.appendChild(div);
+
+            const timeline = panel.querySelector('.timeline');
+
+            journey.legs.forEach(leg => {
+                const div = document.createElement('div');
+                div.className = `leg ${leg.type}`;
+                
+                const routeClass = leg.type === 'walk' ? 'walk' : 'transit';
+                
+                div.innerHTML = `
+                    <div class="leg-time">${leg.start_time} - ${leg.end_time}</div>
+                    <div class="leg-desc">
+                        Z: ${leg.from_stop} <br>
+                        Do: ${leg.to_stop}
+                        <span class="route ${routeClass}">${leg.route_name}</span>
+                    </div>
+                `;
+                timeline.appendChild(div);
+            });
+
+            elResults.appendChild(panel);
         });
 
         elResults.classList.remove('hidden');

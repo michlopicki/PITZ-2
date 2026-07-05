@@ -38,13 +38,13 @@ Liczę podgraf przejść pieszych o promieniu 1,5 km
 
 ### RAPTOR
 
-Zaimplementowałem podstawowy RAPTOR szukający najwcześniejszego możliwego przyjazdu dla danego czasu odjazdu.
+Zaimplementowałem podstawowy RAPTOR (z tym było troche zabawy) szukający najwcześniejszego możliwego przyjazdu dla danego czasu odjazdu.
 Napotkane problemy:
 - Nazwy przystanków - na początku straciłem w builderze nazwy przystanków i miałem tylko id
 - Gubiłem czas odjechania połączenia, trzymając tylko czas przyjazdu na przystanek
 - Czas przesiadki - miałem zerowy minimalny czas przesiadki -> ustawiłem go na 120 sekund domyślnie
 
-Nierozwiązane:
+Nierozwiązane problemy:
 - Nawet jak czas odjazdu pierwszego połączenia jest późniejszy to pokazuje wyjście piesze o zadanej godzinie
 - Przejścia piesze pomiędzy tymi samymi przystankami (dodać numery przystanków czy złączyć w jeden)
 
@@ -54,3 +54,11 @@ W tworzeniu warstwy graficznej LLM jest współautorem
 Stworzyłem z pomocą LLM skrypt w js i stronę do wyświetlania wyszukiwarki połączeń w przeglądarce.
 Dzięki temu można wybrać przystanki początkowy i końcowy (podpowiada dostępne), godzinę odjazdu i wyszukać połączenie.
 
+### Czas wyruszenia
+Naprawiłem błąd z czasem wyruszenia o zadanej godzinie. 
+Teraz czas wyruszenia dorównuje do pierwszego połączenia, po wykonaniu algorytmu.
+
+### McRAPTOR
+Dodałem do RAPTORa, żeby zwracał zbiór pareto optymalny - pod względem czasu dojazdu i liczby przesiadek.
+Algorytm już to liczył, więc kwestia była tylko żeby to wyciągnąć.
+Teraz wyszukiwarka działa całkiem sensownie. Myślę, że to dobry moment na koniec projektu.

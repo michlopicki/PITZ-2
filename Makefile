@@ -7,7 +7,7 @@ build:
 	$(MAKE) -C build pitz
 
 run: build
-	cd build && ./pitz ../data/krk-A ../data/krk-T ../data/krk-M ../data/km-A ../data/km-T #../data/polish-trains
+	cd build && ./pitz ../data/krk-A ../data/krk-T ../data/krk-M ../data/km-A ../data/km-T ../data/polish-trains
 
 clean:
 	rm -rf build
