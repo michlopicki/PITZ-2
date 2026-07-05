@@ -25,3 +25,7 @@ make run
 ```
 A następnie wejść na 
 [localhost](http://localhost:8080/)
+
+## Użycie LLM
+Z założenia użyte tylko jako narzędzie do szukania informacji/dokumentacji i narzędzie do refaktoryzacji,
+jeżeli czegoś jest autorem, lub współautorem to piszę o tym w dzienniku prac.
